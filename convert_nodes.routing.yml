@@ -1,0 +1,7 @@
+convert_nodes.admin:
+  path: /admin/config/content/convert_nodes
+  defaults:
+    _title: Convert Nodes
+    _form: \Drupal\convert_nodes\Form\ConvertNodesForm
+  requirements:
+    _permission: 'administer convert_nodes'

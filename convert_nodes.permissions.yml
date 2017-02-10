@@ -1,0 +1,4 @@
+administer convert_nodes:
+  title: 'Administer Convert Nodes'
+  description: 'Allows a user to convert nodes from one content type to another.'
+  restrict access: TRUE
