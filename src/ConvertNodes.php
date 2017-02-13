@@ -73,7 +73,7 @@ class ConvertNodes {
     return $base_table_names;
   }
 
-  public static function sortUserInput($user_input, $fields_new_to) {
+  public static function sortUserInput($user_input, $fields_new_to, $fields_from) {
     // get user input and set up vars
     $map_fields = array();
     $update_fields = array();
@@ -95,6 +95,7 @@ class ConvertNodes {
       else {
         $map_fields[$from] = array(
           'field' => $to,
+          'from_label' => $fields_from[$from]->getLabel(),
           'value' => array(), //this will come in later
         );
       }
@@ -156,7 +157,7 @@ class ConvertNodes {
   }
 
   public static function convertBaseTables($nids, $base_table_names, $to_type, &$context) {
-    $message = 'Converting Base Tabless...';
+    $message = 'Converting Base Tables...';
     $results = array();
     $db = Database::getConnection();
     // Base tables have 'nid' and 'type' columns.
@@ -171,7 +172,7 @@ class ConvertNodes {
   }
 
   public static function convertFieldTables($nids, $field_table_names, $to_type, $update_fields, &$context) {
-    $message = 'Converting Field Tabless...';
+    $message = 'Converting Field Tables...';
     $results = array();
     $db = Database::getConnection();
     // Field tables have 'entity_id' and 'bundle' columns.
@@ -199,7 +200,7 @@ class ConvertNodes {
         if ($map_to['field'] == 'remove') { continue; }
         if ($map_to['field'] == 'append_to_body') {
           $body = $node->get('body')->getValue()[0];
-          $markup = Markup::create($body['value'].'<div class="field__label">'.$map_from.'</div><p>'.$map_to['value'][$nid].'</p>');
+          $markup = Markup::create($body['value'].'<strong>'.$map_to['from_label'].'</strong><p>'.$map_to['value'][$nid].'</p>');
           $node->get('body')->setValue([['value' => $markup, 'summary' => $body['summary'], 'format' => $body['format']]]);
         }
         else {

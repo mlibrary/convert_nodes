@@ -40,7 +40,7 @@ class ConvertNodesForm extends FormBase implements FormInterface {
 
   public function _convertNodes() {
     $base_table_names = ConvertNodes::getBaseTableNames();
-    $user_input = ConvertNodes::sortUserInput($this->user_input, $this->fields_new_to);
+    $user_input = ConvertNodes::sortUserInput($this->user_input, $this->fields_new_to, $this->fields_from);
     $map_fields = $user_input['map_fields'];
     $update_fields = $user_input['update_fields'];
     $field_table_names = ConvertNodes::getFieldTableNames($this->fields_from);
