@@ -1,4 +1,21 @@
 <?php
+use Drupal\Core\Routing\RouteMatchInterface;
+
+/**
+ * Implements hook_help().
+ */
+function convert_nodes_help($route_name, RouteMatchInterface $route_match) {
+  switch ($route_name) {
+    // Main module help for the convert_nodes module.
+    case 'help.page.convert_nodes':
+      $output = '';
+      $output .= '<h3>' . t('About') . '</h3>';
+      $output .= '<p>' . t('The convert nodes module provides a UI to convert drupal8 nodes from one content type to another'). '</p>';
+      return $output;
+  }
+}
+
+
 /**
  * Implements hook_install().
  *
@@ -71,7 +88,7 @@ exit(print_r($field->getFieldStorageDefinition()->getPropertyDefinition('value')
   $nids = $query->execute();
 
   $db = \Drupal\Core\Database\Database::getConnection();
-  
+
   // get old fields
   foreach ($nids as $vid => $nid) {
     $node = \Drupal\node\Entity\Node::load($nid);
@@ -147,9 +164,9 @@ exit(print_r($field->getFieldStorageDefinition()->getPropertyDefinition('value')
     $db->update('')
       ->condition('bundle', 'policy')
       ->fields(array(
-      
+
       ))
-      
+
     $db->insert('node__field_type_of_documentation')
       ->fields(array(
         'bundle' => 'policy',
