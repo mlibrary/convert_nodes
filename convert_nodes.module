@@ -1,4 +1,10 @@
 <?php
+
+/**
+ * @file
+ * Contains \Drupal\convert_nodes\convert_nodes.module.
+ */
+
 use Drupal\Core\Routing\RouteMatchInterface;
 
 /**
@@ -10,7 +16,7 @@ function convert_nodes_help($route_name, RouteMatchInterface $route_match) {
     case 'help.page.convert_nodes':
       $output = '';
       $output .= '<h3>' . t('About') . '</h3>';
-      $output .= '<p>' . t('The convert nodes module provides a UI to convert drupal8 nodes from one content type to another'). '</p>';
+      $output .= '<p>' . t('The convert nodes module provides a UI to convert drupal8 nodes from one content type to another') . '</p>';
       return $output;
   }
 }
