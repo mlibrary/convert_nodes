@@ -73,20 +73,20 @@ class ConvertNodes {
     return $base_table_names;
   }
 
-  public static function sortUserInput($user_input, $fields_new_to, $fields_from) {
+  public static function sortUserInput($userInput, $fields_new_to, $fields_from) {
     // get user input and set up vars
     $map_fields = array();
     $update_fields = array();
     // remove stuff we dont need
     $unset_data = ['op','form_build_id','form_token','form_id'];
-    foreach ($user_input as $from => $to) {
+    foreach ($userInput as $from => $to) {
       if (in_array($from, $unset_data)) {
         continue;
       }
       if ($from == $to) {
         $update_fields[] = $from;
       }
-      else if (in_array($from, $fields_new_to) && !in_array($from, $user_input)) {
+      else if (in_array($from, $fields_new_to) && !in_array($from, $userInput)) {
         $map_fields['create_new'] = array(
           'field' => $from,
           'value' => $to,

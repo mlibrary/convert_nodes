@@ -29,7 +29,7 @@ class ConvertNodesForm extends FormBase implements FormInterface {
   protected $create_new = NULL;
   protected $fields_new_to = NULL;
   // keep track of user input
-  protected $user_input = array();
+  protected $userInput = array();
 
   /**
    * {@inheritdoc}
@@ -40,9 +40,9 @@ class ConvertNodesForm extends FormBase implements FormInterface {
 
   public function _convertNodes() {
     $base_table_names = ConvertNodes::getBaseTableNames();
-    $user_input = ConvertNodes::sortUserInput($this->user_input, $this->fields_new_to, $this->fields_from);
-    $map_fields = $user_input['map_fields'];
-    $update_fields = $user_input['update_fields'];
+    $userInput = ConvertNodes::sortUserInput($this->userInput, $this->fields_new_to, $this->fields_from);
+    $map_fields = $userInput['map_fields'];
+    $update_fields = $userInput['update_fields'];
     $field_table_names = ConvertNodes::getFieldTableNames($this->fields_from);
     $nids = ConvertNodes::getNids($this->from_type);
     $map_fields = ConvertNodes::getOldFieldValues($nids, $map_fields, $this->fields_to);
@@ -71,7 +71,7 @@ class ConvertNodesForm extends FormBase implements FormInterface {
         break;
       case 2:
         $form_state->setRebuild();
-        $this->user_input = $form_state->getUserInput();
+        $this->userInput = $form_state->getValues();
         break;
       case 3:
         $this->create_new = $form['create_new'];
@@ -81,7 +81,7 @@ class ConvertNodesForm extends FormBase implements FormInterface {
         $form_state->setRebuild();
         break;
       case 4:
-        $this->user_input = array_merge($this->user_input, $form_state->getUserInput());
+        $this->userInput = array_merge($this->userInput, $form_state->getValues());
         $form_state->setRebuild();
         break;
       case 5:
@@ -163,7 +163,7 @@ class ConvertNodesForm extends FormBase implements FormInterface {
         $entityManager = \Drupal::service('entity_field.manager');
         // put the to fields in the form for new values
         foreach ($this->fields_new_to as $field_name) {
-          if (!in_array($field_name, $this->user_input)) {
+          if (!in_array($field_name, $this->userInput)) {
 // TODO Need to figure out a way to get form element based on field def here
 // for now just a textfield
 /*
