@@ -29,7 +29,7 @@ class ConvertNodesForm extends FormBase implements FormInterface {
   protected $create_new = NULL;
   protected $fields_new_to = NULL;
   // keep track of user input
-  protected $userInput = array();
+  protected $userInput = [];
 
   /**
    * {@inheritdoc}
@@ -46,15 +46,15 @@ class ConvertNodesForm extends FormBase implements FormInterface {
     $field_table_names = ConvertNodes::getFieldTableNames($this->fields_from);
     $nids = ConvertNodes::getNids($this->from_type);
     $map_fields = ConvertNodes::getOldFieldValues($nids, $map_fields, $this->fields_to);
-    $batch = array(
+    $batch = [
       'title' => t('Converting Base Tables...'),
-      'operations' => array(
-        array('\Drupal\convert_nodes\ConvertNodes::convertBaseTables', array($nids, $base_table_names, $this->to_type)),
-        array('\Drupal\convert_nodes\ConvertNodes::convertFieldTables', array($nids, $field_table_names, $this->to_type, $update_fields)),
-        array('\Drupal\convert_nodes\ConvertNodes::addNewFields', array($nids, $map_fields)),
-      ),
+      'operations' => [
+        ['\Drupal\convert_nodes\ConvertNodes::convertBaseTables', [$nids, $base_table_names, $this->to_type]],
+        ['\Drupal\convert_nodes\ConvertNodes::convertFieldTables', [$nids, $field_table_names, $this->to_type, $update_fields]],
+        ['\Drupal\convert_nodes\ConvertNodes::addNewFields', [$nids, $map_fields]],
+      ],
       'finished' => '\Drupal\convert_nodes\ConvertNodes::ConvertNodesFinishedCallback',
-    );
+    ];
     batch_set($batch);
     return 'All nodes of type '.$this->from_type.' were converted to '.$this->to_type;
   }
@@ -138,7 +138,7 @@ class ConvertNodesForm extends FormBase implements FormInterface {
         $fields_from_form = $fields_from['fields_from_form'];
 
         // find missing fields. allowing values to be input later
-        $fields_to_names = array_diff($fields_to_names, array('append_to_body','remove'));
+        $fields_to_names = array_diff($fields_to_names, ['append_to_body','remove']);
         $this->fields_new_to = array_diff(array_keys($fields_to_names), $fields_from_names);
 
         $form = array_merge($form, $fields_from_form);
@@ -149,10 +149,10 @@ class ConvertNodesForm extends FormBase implements FormInterface {
         ];
         break;
       case 3:
-        $form['create_new'] = array(
+        $form['create_new'] = [
           '#type' => 'checkbox',
           '#title' => $this->t('Create field values for fields in new content type'),
-        );
+        ];
         $form['actions']['submit'] = [
           '#type' => 'submit',
           '#value' => $this->t('Next'),

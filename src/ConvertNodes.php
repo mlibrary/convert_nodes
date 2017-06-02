@@ -35,7 +35,7 @@ class ConvertNodes {
         ];
       }
     }
-    return array('fields_from_names' => $fields_from_names, 'fields_from_form' => $form);
+    return ['fields_from_names' => $fields_from_names, 'fields_from_form' => $form];
   }
 
   public static function getToFields($fields_to) {
@@ -52,7 +52,7 @@ class ConvertNodes {
         $fields_to_types[$field->getName()] = $field->getFieldStorageDefinition()->getPropertyDefinition($val_name)->getDataType();
       }
     }
-    return array('fields_to_names' => $fields_to_names, 'fields_to_types' => $fields_to_types);
+    return ['fields_to_names' => $fields_to_names, 'fields_to_types' => $fields_to_types];
   }
 
   public static function getContentTypes() {
@@ -75,8 +75,8 @@ class ConvertNodes {
 
   public static function sortUserInput($userInput, $fields_new_to, $fields_from) {
     // get user input and set up vars
-    $map_fields = array();
-    $update_fields = array();
+    $map_fields = [];
+    $update_fields = [];
     // remove stuff we dont need
     $unset_data = ['op','form_build_id','form_token','form_id'];
     foreach ($userInput as $from => $to) {
@@ -87,20 +87,20 @@ class ConvertNodes {
         $update_fields[] = $from;
       }
       else if (in_array($from, $fields_new_to) && !in_array($from, $userInput)) {
-        $map_fields['create_new'] = array(
+        $map_fields['create_new'] = [
           'field' => $from,
           'value' => $to,
-        );
+        ];
       }
       else {
-        $map_fields[$from] = array(
+        $map_fields[$from] = [
           'field' => $to,
           'from_label' => $fields_from[$from]->getLabel(),
-          'value' => array(), //this will come in later
-        );
+          'value' => [], //this will come in later
+        ];
       }
     }
-    return array('map_fields' => $map_fields, 'update_fields' => $update_fields);
+    return ['map_fields' => $map_fields, 'update_fields' => $update_fields];
   }
 
   public static function getFieldTableNames($fields_from) {
@@ -145,7 +145,7 @@ class ConvertNodes {
           // or better yet, find a better way to do this
           $from_type = $node->$map_from->getFieldDefinition()->getFieldStorageDefinition()->getType();
           $to_type = $fields_to[$map_to['field']];
-          if (!empty($to_type) && in_array('datetime',array($to_type,$from_type))) {
+          if (!empty($to_type) && in_array('datetime',[$to_type,$from_type])) {
             $date = new \DateTime($value);
             $value = $date->format('Y-m-d');
           }
@@ -158,7 +158,7 @@ class ConvertNodes {
 
   public static function convertBaseTables($nids, $base_table_names, $to_type, &$context) {
     $message = 'Converting Base Tables...';
-    $results = array();
+    $results = [];
     $db = Database::getConnection();
     // Base tables have 'nid' and 'type' columns.
     foreach ($base_table_names as $table_name) {
@@ -173,7 +173,7 @@ class ConvertNodes {
 
   public static function convertFieldTables($nids, $field_table_names, $to_type, $update_fields, &$context) {
     $message = 'Converting Field Tables...';
-    $results = array();
+    $results = [];
     $db = Database::getConnection();
     // Field tables have 'entity_id' and 'bundle' columns.
     foreach ($field_table_names as $field_name => $table_name) {
@@ -193,7 +193,7 @@ class ConvertNodes {
     //flush cache so we recognize new bundle type before updates
     drupal_flush_all_caches();
     $message = 'Adding Fields...';
-    $results = array();
+    $results = [];
     foreach ($nids as $vid => $nid) {
       $node = \Drupal\node\Entity\Node::load($nid);
       foreach ($map_fields as $map_from => $map_to) {
