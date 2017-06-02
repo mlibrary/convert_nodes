@@ -8,31 +8,56 @@ use Drupal\Core\Form\FormStateInterface;
 use Drupal\convert_nodes\ConvertNodes;
 
 /**
- *
+ * ConvertNodesForm.
  */
 class ConvertNodesForm extends FormBase implements FormInterface {
 
   /**
    * Set a var to make this easier to keep track of.
+   *
+   * @var step
    */
   protected $step = 1;
   /**
    * Set some content type vars.
+   *
+   * @var fromType
    */
-  protected $from_type = NULL;
-  protected $to_type = NULL;
+  protected $fromType = NULL;
+  /**
+   * Set some content type vars.
+   *
+   * @var toType
+   */
+  protected $toType = NULL;
   /**
    * Set field vars.
+   *
+   * @var fieldsFrom
    */
-  protected $fields_from = NULL;
-  protected $fields_to = NULL;
+  protected $fieldsFrom = NULL;
+  /**
+   * Set field vars.
+   *
+   * @var fieldsTo
+   */
+  protected $fieldsTo = NULL;
   /**
    * Create new based on to content type.
+   *
+   * @var createNew
    */
-  protected $create_new = NULL;
-  protected $fields_new_to = NULL;
+  protected $createNew = NULL;
+  /**
+   * Create new based on to content type.
+   *
+   * @var fields_new_to
+   */
+  protected $fieldsNewTo = NULL;
   /**
    * Keep track of user input.
+   *
+   * @var userInput
    */
   protected $userInput = [];
 
@@ -44,27 +69,36 @@ class ConvertNodesForm extends FormBase implements FormInterface {
   }
 
   /**
-   *
+   * {@inheritdoc}
    */
-  public function _convertNodes() {
+  public function convertNodes() {
     $base_table_names = ConvertNodes::getBaseTableNames();
-    $userInput = ConvertNodes::sortUserInput($this->userInput, $this->fields_new_to, $this->fields_from);
+    $userInput = ConvertNodes::sortUserInput($this->userInput, $this->fieldsNewTo, $this->fieldsFrom);
     $map_fields = $userInput['map_fields'];
     $update_fields = $userInput['update_fields'];
-    $field_table_names = ConvertNodes::getFieldTableNames($this->fields_from);
-    $nids = ConvertNodes::getNids($this->from_type);
-    $map_fields = ConvertNodes::getOldFieldValues($nids, $map_fields, $this->fields_to);
+    $field_table_names = ConvertNodes::getFieldTableNames($this->fieldsFrom);
+    $nids = ConvertNodes::getNids($this->fromType);
+    $map_fields = ConvertNodes::getOldFieldValues($nids, $map_fields, $this->fieldsTo);
     $batch = [
       'title' => t('Converting Base Tables...'),
       'operations' => [
-        ['\Drupal\convert_nodes\ConvertNodes::convertBaseTables', [$nids, $base_table_names, $this->to_type]],
-        ['\Drupal\convert_nodes\ConvertNodes::convertFieldTables', [$nids, $field_table_names, $this->to_type, $update_fields]],
-        ['\Drupal\convert_nodes\ConvertNodes::addNewFields', [$nids, $map_fields]],
+        [
+          '\Drupal\convert_nodes\ConvertNodes::convertBaseTables',
+          [$nids, $base_table_names, $this->toType],
+        ],
+        [
+          '\Drupal\convert_nodes\ConvertNodes::convertFieldTables',
+          [$nids, $field_table_names, $this->toType, $update_fields],
+        ],
+        [
+          '\Drupal\convert_nodes\ConvertNodes::addNewFields',
+          [$nids, $map_fields],
+        ],
       ],
-      'finished' => '\Drupal\convert_nodes\ConvertNodes::ConvertNodesFinishedCallback',
+      'finished' => '\Drupal\convert_nodes\ConvertNodes::convertNodesFinishedCallback',
     ];
     batch_set($batch);
-    return 'All nodes of type ' . $this->from_type . ' were converted to ' . $this->to_type;
+    return 'All nodes of type ' . $this->fromType . ' were converted to ' . $this->toType;
   }
 
   /**
@@ -74,33 +108,57 @@ class ConvertNodesForm extends FormBase implements FormInterface {
     switch ($this->step) {
       case 1:
         $form_state->setRebuild();
-        $this->from_type = $form['convert_nodes_content_type_from']['#value'];
-        $this->to_type = $form['convert_nodes_content_type_to']['#value'];
+        $this->fromType = $form['convert_nodes_content_type_from']['#value'];
+        $this->toType = $form['convert_nodes_content_type_to']['#value'];
         break;
 
       case 2:
         $form_state->setRebuild();
-        $this->userInput = $form_state->getValues();
+        $data_to_process = array_diff_key(
+                            $form_state->getValues(),
+                            array_flip(
+                              [
+                                'op',
+                                'submit',
+                                'form_id',
+                                'form_build_id',
+                                'form_token',
+                              ]
+                            )
+                          );
+        $this->userInput = $data_to_process;
         break;
 
       case 3:
-        $this->create_new = $form['create_new'];
-        if (empty($this->create_new)) {
+        $this->createNew = $form['create_new'];
+        if (empty($this->createNew)) {
           goto five;
         }
         $form_state->setRebuild();
         break;
 
       case 4:
-        $this->userInput = array_merge($this->userInput, $form_state->getValues());
+        $data_to_process = array_diff_key(
+                            $form_state->getValues(),
+                            array_flip(
+                              [
+                                'op',
+                                'submit',
+                                'form_id',
+                                'form_build_id',
+                                'form_token',
+                              ]
+                            )
+                          );
+        $this->userInput = array_merge($this->userInput, $data_to_process);
         $form_state->setRebuild();
         break;
 
       case 5:
         // Used also for goto.
         five:
-        if (method_exists($this, '_convertNodes')) {
-          $return_verify = $this->_convertNodes();
+        if (method_exists($this, 'convertNodes')) {
+          $return_verify = $this->convertNodes();
         }
         drupal_set_message($return_verify);
         \Drupal::service("router.builder")->rebuild();
@@ -141,20 +199,20 @@ class ConvertNodesForm extends FormBase implements FormInterface {
       case 2:
         // Get the fields.
         $entityManager = \Drupal::service('entity_field.manager');
-        $this->fields_from = $entityManager->getFieldDefinitions('node', $this->from_type);
-        $this->fields_to = $entityManager->getFieldDefinitions('node', $this->to_type);
+        $this->fieldsFrom = $entityManager->getFieldDefinitions('node', $this->fromType);
+        $this->fieldsTo = $entityManager->getFieldDefinitions('node', $this->toType);
 
-        $fields_to = ConvertNodes::getToFields($this->fields_to);
+        $fields_to = ConvertNodes::getToFields($this->fieldsTo);
         $fields_to_names = $fields_to['fields_to_names'];
         $fields_to_types = $fields_to['fields_to_types'];
 
-        $fields_from = ConvertNodes::getFromFields($this->fields_from, $fields_to_names, $fields_to_types);
+        $fields_from = ConvertNodes::getFromFields($this->fieldsFrom, $fields_to_names, $fields_to_types);
         $fields_from_names = $fields_from['fields_from_names'];
         $fields_from_form = $fields_from['fields_from_form'];
 
         // Find missing fields. allowing values to be input later.
         $fields_to_names = array_diff($fields_to_names, ['append_to_body', 'remove']);
-        $this->fields_new_to = array_diff(array_keys($fields_to_names), $fields_from_names);
+        $this->fieldsNewTo = array_diff(array_keys($fields_to_names), $fields_from_names);
 
         $form = array_merge($form, $fields_from_form);
         $form['actions']['submit'] = [
@@ -179,12 +237,13 @@ class ConvertNodesForm extends FormBase implements FormInterface {
       case 4:
         $entityManager = \Drupal::service('entity_field.manager');
         // Put the to fields in the form for new values.
-        foreach ($this->fields_new_to as $field_name) {
+        foreach ($this->fieldsNewTo as $field_name) {
           if (!in_array($field_name, $this->userInput)) {
-            // TODO Need to figure out a way to get form element based on field def here
-            // for now just a textfield
+            // TODO Need to figure out a way to get form element
+            // based on field def here. for now just a textfield
             /*
-            $field = $entityManager->getFieldDefinitions('node', $this->to_type)[$field_name];
+            $field = $entityManager->getFieldDefinitions('node', $this->toType)
+            $field = $field[$field_name];
             $field_type = $field->getFieldStorageDefinition()->getType();
             $field_options = $field->getFieldStorageDefinition()->getSettings();
             $element = array (
@@ -198,7 +257,7 @@ class ConvertNodesForm extends FormBase implements FormInterface {
              */
             $form[$field_name] = [
               '#type' => 'textfield',
-              '#title' => t('Set Field [' . $field_name . ']'),
+              '#title' => t('Set Field @field_name', ['@field_name' => $field_name]),
             ];
           }
         }
@@ -225,13 +284,7 @@ class ConvertNodesForm extends FormBase implements FormInterface {
    * {@inheritdoc}
    */
   public function validateForm(array &$form, FormStateInterface $form_state) {
-    $this->from_type = $form['convert_nodes_content_type_from']['#value'];
-    $query = \Drupal::entityQuery('node')->condition('type', $this->from_type);
-    $count_type = $query->count()->execute();
-    if ($count_type == 0) {
-      $form_state->setErrorByName('convert_nodes_content_type_from', $this->t('No content found to convert.'));
-    }
-
+    // TODO - this will need to incorporate form steps!!!!
   }
 
 }

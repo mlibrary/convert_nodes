@@ -2,6 +2,7 @@
 
 /**
  * @file
+ * Contains \Drupal\convert_nodes\convert_nodes.module.
  */
 
 use Drupal\Core\Routing\RouteMatchInterface;

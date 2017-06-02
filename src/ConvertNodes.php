@@ -7,12 +7,12 @@ use Drupal\Core\Render\Markup;
 use Drupal\Core\Database\Database;
 
 /**
- *
+ * ConvertNodes.
  */
 class ConvertNodes {
 
   /**
-   *
+   * {@inheritdoc}
    */
   public static function getFromFields($fields_from, $fields_to_names, $fields_to_types) {
     $fields_from_names = [];
@@ -31,7 +31,11 @@ class ConvertNodes {
         $fields_from_names[] = $field->getName();
         $form[$field->getName()] = [
           '#type' => 'select',
-          '#title' => t('From Field [' . $field->getName() . '] ' . (is_object($field->getLabel()) ? $field->getLabel()->render() : $field->getLabel()) . ':<br/> To Field'),
+          '#title' => t('From Field [@field_name] @field_label:<br/> To Field',
+            [
+              '@field_name' => $field->getName(),
+              '@field_label' => (is_object($field->getLabel()) ? $field->getLabel()->render() : $field->getLabel()),
+            ]),
           '#options' => $options,
           '#default_value' => (array_key_exists($field->getName(), $fields_to_names) ? $field->getName() : NULL),
         ];
@@ -41,7 +45,7 @@ class ConvertNodes {
   }
 
   /**
-   *
+   * {@inheritdoc}
    */
   public static function getToFields($fields_to) {
     $fields_to_names = [];
@@ -62,7 +66,7 @@ class ConvertNodes {
   }
 
   /**
-   *
+   * {@inheritdoc}
    */
   public static function getContentTypes() {
     $contentTypes = \Drupal::service('entity.manager')->getStorage('node_type')->loadMultiple();
@@ -74,7 +78,7 @@ class ConvertNodes {
   }
 
   /**
-   *
+   * {@inheritdoc}
    */
   public static function getBaseTableNames() {
     $storage = \Drupal::service('entity_type.manager')->getStorage('node');
@@ -86,7 +90,7 @@ class ConvertNodes {
   }
 
   /**
-   *
+   * {@inheritdoc}
    */
   public static function sortUserInput($userInput, $fields_new_to, $fields_from) {
     // Get user input and set up vars.
@@ -120,7 +124,7 @@ class ConvertNodes {
   }
 
   /**
-   *
+   * {@inheritdoc}
    */
   public static function getFieldTableNames($fields_from) {
     $table_mapping = \Drupal::service('entity_type.manager')->getStorage('node')->getTableMapping();
@@ -140,7 +144,7 @@ class ConvertNodes {
   }
 
   /**
-   *
+   * {@inheritdoc}
    */
   public static function getNids($from_type) {
     // Get the node IDs to update.
@@ -151,7 +155,7 @@ class ConvertNodes {
   }
 
   /**
-   *
+   * {@inheritdoc}
    */
   public static function getOldFieldValues($nids, $map_fields, $fields_to) {
     foreach ($nids as $vid => $nid) {
@@ -184,7 +188,7 @@ class ConvertNodes {
   }
 
   /**
-   *
+   * {@inheritdoc}
    */
   public static function convertBaseTables($nids, $base_table_names, $to_type, &$context) {
     $message = 'Converting Base Tables...';
@@ -202,7 +206,7 @@ class ConvertNodes {
   }
 
   /**
-   *
+   * {@inheritdoc}
    */
   public static function convertFieldTables($nids, $field_table_names, $to_type, $update_fields, &$context) {
     $message = 'Converting Field Tables...';
@@ -223,7 +227,7 @@ class ConvertNodes {
   }
 
   /**
-   *
+   * {@inheritdoc}
    */
   public static function addNewFields($nids, $map_fields, &$context) {
     // Flush cache so we recognize new bundle type before updates.
@@ -239,7 +243,13 @@ class ConvertNodes {
         if ($map_to['field'] == 'append_to_body') {
           $body = $node->get('body')->getValue()[0];
           $markup = Markup::create($body['value'] . '<strong>' . $map_to['from_label'] . '</strong><p>' . $map_to['value'][$nid] . '</p>');
-          $node->get('body')->setValue([['value' => $markup, 'summary' => $body['summary'], 'format' => $body['format']]]);
+          $node->get('body')->setValue([
+            [
+              'value' => $markup,
+              'summary' => $body['summary'],
+              'format' => $body['format'],
+            ],
+          ]);
         }
         else {
           // TODO account for multiple values.
@@ -259,9 +269,9 @@ class ConvertNodes {
   }
 
   /**
-   *
+   * {@inheritdoc}
    */
-  public function ConvertNodesFinishedCallback($success, $results, $operations) {
+  public function convertNodesFinishedCallback($success, $results, $operations) {
     // The 'success' parameter means no fatal PHP errors were detected. All
     // other error management should be handled using 'results'.
     if ($success) {
