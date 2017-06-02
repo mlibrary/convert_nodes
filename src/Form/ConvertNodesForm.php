@@ -1,34 +1,39 @@
 <?php
 
-/**
- * @file
- * Contains \Drupal\convert_nodes\Form\ConvertNodesForm.
- */
-
 namespace Drupal\convert_nodes\Form;
 
 use Drupal\Core\Form\FormBase;
-use Drupal\Core\Form\FormState;
 use Drupal\Core\Form\FormInterface;
 use Drupal\Core\Form\FormStateInterface;
-use Drupal\Core\Field\WidgetBase;
-use Drupal\Core\Render\Markup;
 use Drupal\convert_nodes\ConvertNodes;
 
+/**
+ *
+ */
 class ConvertNodesForm extends FormBase implements FormInterface {
 
-  // set a var to make this easier to keep track of
+  /**
+   * Set a var to make this easier to keep track of.
+   */
   protected $step = 1;
-  // set some content type vars
+  /**
+   * Set some content type vars.
+   */
   protected $from_type = NULL;
   protected $to_type = NULL;
-  // set field vars
+  /**
+   * Set field vars.
+   */
   protected $fields_from = NULL;
   protected $fields_to = NULL;
-  // create new based on to content type
+  /**
+   * Create new based on to content type.
+   */
   protected $create_new = NULL;
   protected $fields_new_to = NULL;
-  // keep track of user input
+  /**
+   * Keep track of user input.
+   */
   protected $userInput = [];
 
   /**
@@ -38,6 +43,9 @@ class ConvertNodesForm extends FormBase implements FormInterface {
     return 'convert_nodes_admin';
   }
 
+  /**
+   *
+   */
   public function _convertNodes() {
     $base_table_names = ConvertNodes::getBaseTableNames();
     $userInput = ConvertNodes::sortUserInput($this->userInput, $this->fields_new_to, $this->fields_from);
@@ -56,7 +64,7 @@ class ConvertNodesForm extends FormBase implements FormInterface {
       'finished' => '\Drupal\convert_nodes\ConvertNodes::ConvertNodesFinishedCallback',
     ];
     batch_set($batch);
-    return 'All nodes of type '.$this->from_type.' were converted to '.$this->to_type;
+    return 'All nodes of type ' . $this->from_type . ' were converted to ' . $this->to_type;
   }
 
   /**
@@ -69,10 +77,12 @@ class ConvertNodesForm extends FormBase implements FormInterface {
         $this->from_type = $form['convert_nodes_content_type_from']['#value'];
         $this->to_type = $form['convert_nodes_content_type_to']['#value'];
         break;
+
       case 2:
         $form_state->setRebuild();
         $this->userInput = $form_state->getValues();
         break;
+
       case 3:
         $this->create_new = $form['create_new'];
         if (empty($this->create_new)) {
@@ -80,18 +90,20 @@ class ConvertNodesForm extends FormBase implements FormInterface {
         }
         $form_state->setRebuild();
         break;
+
       case 4:
         $this->userInput = array_merge($this->userInput, $form_state->getValues());
         $form_state->setRebuild();
         break;
+
       case 5:
-      //used also for goto.
-      five:
-          if (method_exists($this, '_convertNodes')) {
-            $return_verify = $this->_convertNodes();
-          }
-          drupal_set_message($return_verify);
-          \Drupal::service("router.builder")->rebuild();
+        // Used also for goto.
+        five:
+        if (method_exists($this, '_convertNodes')) {
+          $return_verify = $this->_convertNodes();
+        }
+        drupal_set_message($return_verify);
+        \Drupal::service("router.builder")->rebuild();
         break;
     }
     $this->step++;
@@ -100,12 +112,14 @@ class ConvertNodesForm extends FormBase implements FormInterface {
   /**
    * {@inheritdoc}
    */
-  public function buildForm(array $form, \Drupal\Core\Form\FormStateInterface $form_state) {
-    if (isset($this->form)) { $form = $this->form; }
+  public function buildForm(array $form, FormStateInterface $form_state) {
+    if (isset($this->form)) {
+      $form = $this->form;
+    }
     switch ($this->step) {
       case 1:
         drupal_set_message('This module is experiemental. PLEASE do not use on production databases without prior testing and a complete database dump.', 'warning');
-        // get content types and put them in the form
+        // Get content types and put them in the form.
         $contentTypesList = ConvertNodes::getContentTypes();
         $form['convert_nodes_content_type_from'] = [
           '#type' => 'select',
@@ -123,8 +137,9 @@ class ConvertNodesForm extends FormBase implements FormInterface {
           '#button_type' => 'primary',
         ];
         break;
+
       case 2:
-        // get the fields
+        // Get the fields.
         $entityManager = \Drupal::service('entity_field.manager');
         $this->fields_from = $entityManager->getFieldDefinitions('node', $this->from_type);
         $this->fields_to = $entityManager->getFieldDefinitions('node', $this->to_type);
@@ -137,8 +152,8 @@ class ConvertNodesForm extends FormBase implements FormInterface {
         $fields_from_names = $fields_from['fields_from_names'];
         $fields_from_form = $fields_from['fields_from_form'];
 
-        // find missing fields. allowing values to be input later
-        $fields_to_names = array_diff($fields_to_names, ['append_to_body','remove']);
+        // Find missing fields. allowing values to be input later.
+        $fields_to_names = array_diff($fields_to_names, ['append_to_body', 'remove']);
         $this->fields_new_to = array_diff(array_keys($fields_to_names), $fields_from_names);
 
         $form = array_merge($form, $fields_from_form);
@@ -148,6 +163,7 @@ class ConvertNodesForm extends FormBase implements FormInterface {
           '#button_type' => 'primary',
         ];
         break;
+
       case 3:
         $form['create_new'] = [
           '#type' => 'checkbox',
@@ -159,29 +175,30 @@ class ConvertNodesForm extends FormBase implements FormInterface {
           '#button_type' => 'primary',
         ];
         break;
+
       case 4:
         $entityManager = \Drupal::service('entity_field.manager');
-        // put the to fields in the form for new values
+        // Put the to fields in the form for new values.
         foreach ($this->fields_new_to as $field_name) {
           if (!in_array($field_name, $this->userInput)) {
-// TODO Need to figure out a way to get form element based on field def here
-// for now just a textfield
-/*
-$field = $entityManager->getFieldDefinitions('node', $this->to_type)[$field_name];
-$field_type = $field->getFieldStorageDefinition()->getType();
-$field_options = $field->getFieldStorageDefinition()->getSettings();
-$element = array (
-'#title' => 'test',
-'#description' => 'some desc',
-'#required' => true,
-'#delta' => 0,
-);
-$test = WidgetBase('test', 'test', $field, array(), array());
-$test->formElement($field, 0, $element, $form, $form_state);
-*/
+            // TODO Need to figure out a way to get form element based on field def here
+            // for now just a textfield
+            /*
+            $field = $entityManager->getFieldDefinitions('node', $this->to_type)[$field_name];
+            $field_type = $field->getFieldStorageDefinition()->getType();
+            $field_options = $field->getFieldStorageDefinition()->getSettings();
+            $element = array (
+            '#title' => 'test',
+            '#description' => 'some desc',
+            '#required' => true,
+            '#delta' => 0,
+            );
+            $test = WidgetBase('test', 'test', $field, array(), array());
+            $test->formElement($field, 0, $element, $form, $form_state);
+             */
             $form[$field_name] = [
               '#type' => 'textfield',
-              '#title' => t('Set Field ['.$field_name.']'),
+              '#title' => t('Set Field [' . $field_name . ']'),
             ];
           }
         }
@@ -191,6 +208,7 @@ $test->formElement($field, 0, $element, $form, $form_state);
           '#button_type' => 'primary',
         ];
         break;
+
       case 5:
         drupal_set_message('This module is experiemental. PLEASE do not use on production databases without prior testing and a complete database dump.', 'warning');
         $form['actions']['submit'] = [
