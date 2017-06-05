@@ -4,6 +4,7 @@ namespace Drupal\convert_nodes\Form;
 
 use Drupal\Core\Form\FormBase;
 use Drupal\Core\Form\FormInterface;
+use Drupal\Core\Form\FormState;
 use Drupal\Core\Form\FormStateInterface;
 use Drupal\convert_nodes\ConvertNodes;
 
@@ -84,11 +85,11 @@ class ConvertNodesForm extends FormBase implements FormInterface {
       'operations' => [
         [
           '\Drupal\convert_nodes\ConvertNodes::convertBaseTables',
-          [$nids, $base_table_names, $this->toType],
+          [$base_table_names, $nids, $this->toType],
         ],
         [
           '\Drupal\convert_nodes\ConvertNodes::convertFieldTables',
-          [$nids, $field_table_names, $this->toType, $update_fields],
+          [$field_table_names, $nids, $this->toType, $update_fields],
         ],
         [
           '\Drupal\convert_nodes\ConvertNodes::addNewFields',
@@ -130,16 +131,21 @@ class ConvertNodesForm extends FormBase implements FormInterface {
         break;
 
       case 3:
-        $this->createNew = $form['create_new'];
-        if (empty($this->createNew)) {
+        $this->createNew = $form['create_new']['#value'];
+        if (!$this->createNew) {
+          $this->step++;
           goto five;
         }
         $form_state->setRebuild();
         break;
 
       case 4:
+        $values = $form_state->getValues()['default_value_input'];
+        foreach ($values as $key => $value) {
+          unset($values[$key]['add_more']);
+        }
         $data_to_process = array_diff_key(
-                            $form_state->getValues(),
+                            $values,
                             array_flip(
                               [
                                 'op',
@@ -151,12 +157,12 @@ class ConvertNodesForm extends FormBase implements FormInterface {
                             )
                           );
         $this->userInput = array_merge($this->userInput, $data_to_process);
+        // Used also for goto.
+        five:
         $form_state->setRebuild();
         break;
 
       case 5:
-        // Used also for goto.
-        five:
         if (method_exists($this, 'convertNodes')) {
           $return_verify = $this->convertNodes();
         }
@@ -174,9 +180,9 @@ class ConvertNodesForm extends FormBase implements FormInterface {
     if (isset($this->form)) {
       $form = $this->form;
     }
+    drupal_set_message('This module is experiemental. PLEASE do not use on production databases without prior testing and a complete database dump.', 'warning');
     switch ($this->step) {
       case 1:
-        drupal_set_message('This module is experiemental. PLEASE do not use on production databases without prior testing and a complete database dump.', 'warning');
         // Get content types and put them in the form.
         $contentTypesList = ConvertNodes::getContentTypes();
         $form['convert_nodes_content_type_from'] = [
@@ -235,30 +241,21 @@ class ConvertNodesForm extends FormBase implements FormInterface {
         break;
 
       case 4:
-        $entityManager = \Drupal::service('entity_field.manager');
         // Put the to fields in the form for new values.
         foreach ($this->fieldsNewTo as $field_name) {
           if (!in_array($field_name, $this->userInput)) {
-            // TODO Need to figure out a way to get form element
-            // based on field def here. for now just a textfield
-            /*
-            $field = $entityManager->getFieldDefinitions('node', $this->toType)
-            $field = $field[$field_name];
-            $field_type = $field->getFieldStorageDefinition()->getType();
-            $field_options = $field->getFieldStorageDefinition()->getSettings();
-            $element = array (
-            '#title' => 'test',
-            '#description' => 'some desc',
-            '#required' => true,
-            '#delta' => 0,
+            // TODO - Date widgets are relative. Fix.
+            // Create an arbitrary entity object.
+            $ids = (object) array(
+              'entity_type' => 'node',
+              'bundle' => $this->toType,
+              'entity_id' => NULL
             );
-            $test = WidgetBase('test', 'test', $field, array(), array());
-            $test->formElement($field, 0, $element, $form, $form_state);
-             */
-            $form[$field_name] = [
-              '#type' => 'textfield',
-              '#title' => t('Set Field @field_name', ['@field_name' => $field_name]),
-            ];
+            $fake_entity = _field_create_entity_from_ids($ids);
+            $items = $fake_entity->get($field_name);
+            $temp_form_element = [];
+            $temp_form_state = new FormState();
+            $form[$field_name] = $items->defaultValuesForm($temp_form_element, $temp_form_state);
           }
         }
         $form['actions']['submit'] = [
@@ -269,7 +266,7 @@ class ConvertNodesForm extends FormBase implements FormInterface {
         break;
 
       case 5:
-        drupal_set_message('This module is experiemental. PLEASE do not use on production databases without prior testing and a complete database dump.', 'warning');
+        drupal_set_message('Are you sure you want to convert all nodes of type '.$this->fromType.' to type '.$this->toType.'?', 'warning');
         $form['actions']['submit'] = [
           '#type' => 'submit',
           '#value' => $this->t('Convert'),

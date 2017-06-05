@@ -106,7 +106,7 @@ class ConvertNodes {
         $update_fields[] = $from;
       }
       elseif (in_array($from, $fields_new_to) && !in_array($from, $userInput)) {
-        $map_fields['create_new'] = [
+        $map_fields['create_new'][] = [
           'field' => $from,
           'value' => $to,
         ];
@@ -120,6 +120,7 @@ class ConvertNodes {
         ];
       }
     }
+
     return ['map_fields' => $map_fields, 'update_fields' => $update_fields];
   }
 
@@ -190,7 +191,7 @@ class ConvertNodes {
   /**
    * {@inheritdoc}
    */
-  public static function convertBaseTables($nids, $base_table_names, $to_type, &$context) {
+  public static function convertBaseTables($base_table_names, $nids, $to_type, &$context) {
     $message = 'Converting Base Tables...';
     $results = [];
     $db = Database::getConnection();
@@ -208,7 +209,7 @@ class ConvertNodes {
   /**
    * {@inheritdoc}
    */
-  public static function convertFieldTables($nids, $field_table_names, $to_type, $update_fields, &$context) {
+  public static function convertFieldTables($field_table_names, $nids, $to_type, $update_fields, &$context) {
     $message = 'Converting Field Tables...';
     $results = [];
     $db = Database::getConnection();
@@ -251,18 +252,17 @@ class ConvertNodes {
             ],
           ]);
         }
-        else {
-          // TODO account for multiple values.
-          $val_name = $node->$map_to['field']->getFieldDefinition()->getFieldStorageDefinition()->getMainPropertyName();
-          if ($map_from == 'create_new') {
-            $node->get($map_to['field'])->setValue([[$val_name => $map_to['value']]]);
-          }
-          elseif (!empty($map_to['value'][$nid])) {
-            $node->get($map_to['field'])->setValue([[$val_name => $map_to['value'][$nid]]]);
+        elseif ($map_from == 'create_new') {
+          foreach ($map_to as $field) {
+            $node->get($field['field'])->setValue($field['value']);
           }
         }
-        $results[] = $node->save();
+        elseif (!empty($map_to['value'][$nid])) {
+          $val_name = $node->$map_to['field']->getFieldDefinition()->getFieldStorageDefinition()->getMainPropertyName();
+          $node->get($map_to['field'])->setValue([[$val_name => $map_to['value'][$nid]]]);
+        }
       }
+      $results[] = $node->save();
     }
     $context['message'] = $message;
     $context['results'] = $results;
