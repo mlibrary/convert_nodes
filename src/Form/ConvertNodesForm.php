@@ -284,10 +284,14 @@ class ConvertNodesForm extends FormBase implements FormInterface {
     switch ($this->step) {
       case 1:
         $this->from_type = $form['convert_nodes_content_type_from']['#value'];
+        $this->to_type = $form['convert_nodes_content_type_to']['#value'];
         $query = \Drupal::entityQuery('node')->condition('type', $this->from_type);
         $count_type = $query->count()->execute();
         if ($count_type == 0) {
           $form_state->setErrorByName('convert_nodes_content_type_from', $this->t('No content found to convert.'));
+        }
+        else if ($this->from_type == $this->to_type) {
+          $form_state->setErrorByName('convert_nodes_content_type_to', $this->t('Please select different content types.'));
         }
         break;
       default:
