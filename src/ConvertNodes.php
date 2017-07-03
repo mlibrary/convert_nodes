@@ -96,7 +96,7 @@ class ConvertNodes {
     // Get user input and set up vars.
     $map_fields = [];
     $update_fields = [];
-    // Remove stuff we dont need.
+    // Remove stuff we don't need.
     $unset_data = ['op', 'form_build_id', 'form_token', 'form_id'];
     foreach ($userInput as $from => $to) {
       if (in_array($from, $unset_data)) {
