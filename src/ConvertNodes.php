@@ -130,7 +130,7 @@ class ConvertNodes {
   public static function getFieldTableNames($fields_from) {
     $table_mapping = \Drupal::service('entity_type.manager')->getStorage('node')->getTableMapping();
     $field_table_names = [];
-    foreach ($fields_from as $key => $field) {
+    foreach ($fields_from as $field) {
       if ($field->getFieldStorageDefinition()->isBaseField() == FALSE) {
         $field_name = $field->getName();
         $field_table = $table_mapping->getFieldTableName($field_name);
@@ -159,7 +159,7 @@ class ConvertNodes {
    * {@inheritdoc}
    */
   public static function getOldFieldValues($nids, $map_fields, $fields_to) {
-    foreach ($nids as $vid => $nid) {
+    foreach ($nids as $nid) {
       $node = Node::load($nid);
       foreach ($map_fields as $map_from => $map_to) {
         if ($map_to['field'] == 'remove' || $map_from == 'create_new') {
@@ -235,7 +235,7 @@ class ConvertNodes {
     drupal_flush_all_caches();
     $message = 'Adding Fields...';
     $results = [];
-    foreach ($nids as $vid => $nid) {
+    foreach ($nids as $nid) {
       $node = Node::load($nid);
       foreach ($map_fields as $map_from => $map_to) {
         if ($map_to['field'] == 'remove') {
