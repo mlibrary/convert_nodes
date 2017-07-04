@@ -9,7 +9,7 @@ use Drupal\Core\Form\FormStateInterface;
 use Drupal\convert_nodes\ConvertNodes;
 use Symfony\Component\DependencyInjection\ContainerInterface;
 use Drupal\Core\Entity\Query\QueryFactory;
-use Drupal\Core\Entity\EntityManagerInterface;
+use Drupal\Core\Entity\EntityFieldManager;
 use Drupal\Core\Routing\RouteBuilderInterface;
 
 /**
@@ -76,7 +76,7 @@ class ConvertNodesForm extends FormBase implements FormInterface {
   /**
    * The entity manager service.
    *
-   * @var \Drupal\Core\Entity\EntityManagerInterface
+   * @var \Drupal\Core\Entity\EntityFieldManager
    */
   protected $entityManager;
 
@@ -90,7 +90,7 @@ class ConvertNodesForm extends FormBase implements FormInterface {
   /**
    * {@inheritdoc}
    */
-  public function __construct(QueryFactory $entity_query, EntityManagerInterface $entity_manager, RouteBuilderInterface $route_builder) {
+  public function __construct(QueryFactory $entity_query, EntityFieldManager $entity_manager, RouteBuilderInterface $route_builder) {
     $this->entityQuery = $entity_query;
     $this->entityManager = $entity_manager;
     $this->routeBuilder = $route_builder;
