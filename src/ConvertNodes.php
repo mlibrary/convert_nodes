@@ -22,8 +22,17 @@ class ConvertNodes {
       foreach ($options as $option => $label) {
         // Because might be target_id.
         $val_name = $field->getFieldStorageDefinition()->getMainPropertyName();
+        //because some data types are more complex
+        $data_type = '';
+        $type = $field->getType();
+        if (empty($field->getFieldStorageDefinition()->getPropertyDefinition($val_name))){
+          $data_type = $type;
+        }
+        else {
+          $data_type = $field->getFieldStorageDefinition()->getPropertyDefinition($val_name)->getDataType();
+        }
         if (!in_array($option, ['append_to_body', 'remove']) &&
-            $fields_to_types[$option] != $field->getFieldStorageDefinition()->getPropertyDefinition($val_name)->getDataType()) {
+            $fields_to_types[$option] != $data_type) {
           unset($options[$option]);
         }
       }
@@ -58,8 +67,17 @@ class ConvertNodes {
       if ($field->getFieldStorageDefinition()->isBaseField() == FALSE) {
         // Because might be target_id.
         $val_name = $field->getFieldStorageDefinition()->getMainPropertyName();
+        //because some data types are more complex
+        $data_type = '';
+        $type = $field->getType();
+        if (empty($field->getFieldStorageDefinition()->getPropertyDefinition($val_name))){
+          $data_type = $type;
+        }
+        else {
+          $data_type = $field->getFieldStorageDefinition()->getPropertyDefinition($val_name)->getDataType();
+        }
         $fields_to_names[$field->getName()] = '[' . $field->getName() . '] ' . (is_object($field->getLabel()) ? $field->getLabel()->render() : $field->getLabel());
-        $fields_to_types[$field->getName()] = $field->getFieldStorageDefinition()->getPropertyDefinition($val_name)->getDataType();
+        $fields_to_types[$field->getName()] = $data_type;
       }
     }
     return ['fields_to_names' => $fields_to_names, 'fields_to_types' => $fields_to_types];
