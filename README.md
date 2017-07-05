@@ -12,8 +12,10 @@ CONTENTS OF THIS FILE
 INTRODUCTION
 ------------
 
-The convert nodes module provides a UI to convert drupal8 nodes from one content type to another.
-Warning message : This module is experiemental. PLEASE do not use on production databases without prior testing and a complete database dump.
+The convert nodes module provides a UI to convert drupal8 nodes
+ from one content type to another.
+Warning message : This module is experiemental. PLEASE do not use on
+ production databases without prior testing and a complete database dump.
 
 Module Instructions on https://www.drupal.org/project/convert_nodes.
 

@@ -22,10 +22,10 @@ class ConvertNodes {
       foreach ($options as $option => $label) {
         // Because might be target_id.
         $val_name = $field->getFieldStorageDefinition()->getMainPropertyName();
-        //because some data types are more complex
+        // Because some data types are more complex.
         $data_type = '';
         $type = $field->getType();
-        if (empty($field->getFieldStorageDefinition()->getPropertyDefinition($val_name))){
+        if (empty($field->getFieldStorageDefinition()->getPropertyDefinition($val_name))) {
           $data_type = $type;
         }
         else {
@@ -67,10 +67,10 @@ class ConvertNodes {
       if ($field->getFieldStorageDefinition()->isBaseField() == FALSE) {
         // Because might be target_id.
         $val_name = $field->getFieldStorageDefinition()->getMainPropertyName();
-        //because some data types are more complex
+        // Because some data types are more complex.
         $data_type = '';
         $type = $field->getType();
-        if (empty($field->getFieldStorageDefinition()->getPropertyDefinition($val_name))){
+        if (empty($field->getFieldStorageDefinition()->getPropertyDefinition($val_name))) {
           $data_type = $type;
         }
         else {
