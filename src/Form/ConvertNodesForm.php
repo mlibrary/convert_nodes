@@ -124,27 +124,32 @@ class ConvertNodesForm extends FormBase implements FormInterface {
     $update_fields = $userInput['update_fields'];
     $field_table_names = ConvertNodes::getFieldTableNames($this->fieldsFrom);
     $nids = ConvertNodes::getNids($this->fromType);
-    $map_fields = ConvertNodes::getOldFieldValues($nids, $map_fields, $this->fieldsTo);
-    $batch = [
-      'title' => $this->t('Converting Base Tables...'),
-      'operations' => [
-        [
-          '\Drupal\convert_nodes\ConvertNodes::convertBaseTables',
-          [$base_table_names, $nids, $this->toType],
+    $limit = 100;
+    if ($nids) {
+      $batch = [
+        'title' => $this->t('Converting Base Tables...'),
+        'operations' => [
+          [
+            '\Drupal\convert_nodes\ConvertNodes::convertBaseTables',
+            [$base_table_names, $nids, $this->toType],
+          ],
+          [
+            '\Drupal\convert_nodes\ConvertNodes::convertFieldTables',
+            [$field_table_names, $nids, $this->toType, $update_fields],
+          ],
+          [
+            '\Drupal\convert_nodes\ConvertNodes::addNewFields',
+            [$nids, $limit, $map_fields],
+          ],
         ],
-        [
-          '\Drupal\convert_nodes\ConvertNodes::convertFieldTables',
-          [$field_table_names, $nids, $this->toType, $update_fields],
-        ],
-        [
-          '\Drupal\convert_nodes\ConvertNodes::addNewFields',
-          [$nids, $map_fields],
-        ],
-      ],
-      'finished' => '\Drupal\convert_nodes\ConvertNodes::convertNodesFinishedCallback',
-    ];
-    batch_set($batch);
-    return 'All nodes of type ' . $this->fromType . ' were converted to ' . $this->toType;
+        'finished' => '\Drupal\convert_nodes\ConvertNodes::convertNodesFinishedCallback',
+      ];
+      batch_set($batch);
+      return 'All nodes of type ' . $this->fromType . ' were converted to ' . $this->toType;
+    }
+    else {
+      return 'No nodes of type ' . $this->fromType . ' were found';
+    }
   }
 
   /**
@@ -225,7 +230,7 @@ class ConvertNodesForm extends FormBase implements FormInterface {
     if (isset($this->form)) {
       $form = $this->form;
     }
-    drupal_set_message($this->t('This module is experiemental. PLEASE do not use on production databases without prior testing and a complete database dump.'), 'warning');
+    drupal_set_message($this->t('This module is experimental. PLEASE do not use on production databases without prior testing and a complete database dump.'), 'warning');
     switch ($this->step) {
       case 1:
         // Get content types and put them in the form.
@@ -262,10 +267,11 @@ class ConvertNodesForm extends FormBase implements FormInterface {
         $fields_from_form = $fields_from['fields_from_form'];
 
         // Find missing fields. allowing values to be input later.
-        $fields_to_names = array_diff($fields_to_names, ['append_to_body', 'remove']);
+        $fields_to_names = array_diff($fields_to_names, ['remove', 'append_to_body']);
         $this->fieldsNewTo = array_diff(array_keys($fields_to_names), $fields_from_names);
 
         $form = array_merge($form, $fields_from_form);
+
         $form['actions']['submit'] = [
           '#type' => 'submit',
           '#value' => $this->t('Next'),
@@ -276,7 +282,7 @@ class ConvertNodesForm extends FormBase implements FormInterface {
       case 3:
         $form['create_new'] = [
           '#type' => 'checkbox',
-          '#title' => $this->t('Create field values for fields in new content type'),
+          '#title' => $this->t('Create field values for new fields in target content type'),
         ];
         $form['actions']['submit'] = [
           '#type' => 'submit',

@@ -31,7 +31,7 @@ class ConvertNodes {
         else {
           $data_type = $field->getFieldStorageDefinition()->getPropertyDefinition($val_name)->getDataType();
         }
-        if (!in_array($option, ['append_to_body', 'remove']) &&
+        if (!in_array($option, ['remove', 'append_to_body']) &&
             $fields_to_types[$option] != $data_type) {
           unset($options[$option]);
         }
@@ -60,8 +60,8 @@ class ConvertNodes {
     $fields_to_names = [];
     $fields_to_types = [];
     // Add some extra options for the form.
-    $fields_to_names['append_to_body'] = 'append_to_body';
     $fields_to_names['remove'] = 'remove';
+    $fields_to_names['append_to_body'] = 'append_to_body';
     // Get the to fields in an array.
     foreach ($fields_to as $field) {
       if ($field->getFieldStorageDefinition()->isBaseField() == FALSE) {
@@ -170,40 +170,7 @@ class ConvertNodes {
     $query = \Drupal::service('entity.query')->get('node');
     $query->condition('type', $from_type);
     $nids = $query->execute();
-    return $nids;
-  }
-
-  /**
-   * {@inheritdoc}
-   */
-  public static function getOldFieldValues($nids, $map_fields, $fields_to) {
-    foreach ($nids as $nid) {
-      $node = Node::load($nid);
-      foreach ($map_fields as $map_from => $map_to) {
-        if ($map_to['field'] == 'remove' || $map_from == 'create_new') {
-          continue;
-        }
-        $value = '';
-        // TODO Need to get multiple values.
-        if ($node->$map_from) {
-          // Because might be target_id.
-          $val_name = $node->$map_from->getFieldDefinition()->getFieldStorageDefinition()->getMainPropertyName();
-          $value = $node->$map_from->$val_name;
-          // Because datetime/date may need converting
-          // TODO date with time did not insert into date only fields
-          // need to test if date without time will insert into date with time
-          // or better yet, find a better way to do this.
-          $from_type = $node->$map_from->getFieldDefinition()->getFieldStorageDefinition()->getType();
-          $to_type = $fields_to[$map_to['field']];
-          if (!empty($to_type) && in_array('datetime', [$to_type, $from_type])) {
-            $date = new \DateTime($value);
-            $value = $date->format('Y-m-d');
-          }
-        }
-        $map_fields[$map_from]['value'][$nid] = $value;
-      }
-    }
-    return $map_fields;
+    return array_values($nids);
   }
 
   /**
@@ -248,20 +215,44 @@ class ConvertNodes {
   /**
    * {@inheritdoc}
    */
-  public static function addNewFields($nids, $map_fields, &$context) {
-    // Flush cache so we recognize new bundle type before updates.
-    drupal_flush_all_caches();
-    $message = 'Adding Fields...';
-    $results = [];
-    foreach ($nids as $nid) {
+  public static function addNewFields($nids, $limit, $map_fields, &$context) {
+    if (empty($context['sandbox'])) {
+      // Flush cache so we recognize new bundle type before updates.
+      drupal_flush_all_caches();
+      $context['sandbox']['progress'] = 0;
+      $context['sandbox']['current_id'] = 0;
+      $context['sandbox']['max'] = count($nids);
+    }
+
+    $current_nids = array_slice($nids, $context['sandbox']['current_id'], $limit, TRUE);
+    foreach ($current_nids as $key => $nid) {
       $node = Node::load($nid);
       foreach ($map_fields as $map_from => $map_to) {
         if ($map_to['field'] == 'remove') {
           continue;
         }
+
+        $value = '';
+        // TODO Need to get multiple values.
+        if ($node->$map_from) {
+          // Because might be target_id.
+          $val_name = $node->$map_from->getFieldDefinition()->getFieldStorageDefinition()->getMainPropertyName();
+          $value = $node->$map_from->$val_name;
+          // Because datetime/date may need converting
+          // TODO date with time did not insert into date only fields
+          // need to test if date without time will insert into date with time
+          // or better yet, find a better way to do this.
+          $from_type = $node->$map_from->getFieldDefinition()->getFieldStorageDefinition()->getType();
+          $to_type = $fields_to[$map_to['field']];
+          if (!empty($to_type) && in_array('datetime', [$to_type, $from_type])) {
+            $date = new \DateTime($value);
+            $value = $date->format('Y-m-d');
+          }
+        }
+
         if ($map_to['field'] == 'append_to_body') {
           $body = $node->get('body')->getValue()[0];
-          $markup = Markup::create($body['value'] . '<strong>' . $map_to['from_label'] . '</strong><p>' . $map_to['value'][$nid] . '</p>');
+          $markup = Markup::create($body['value'] . '<strong>' . $map_to['from_label'] . '</strong><p>' . $value . '</p>');
           $node->get('body')->setValue([
             [
               'value' => $markup,
@@ -275,27 +266,33 @@ class ConvertNodes {
             $node->get($field['field'])->setValue($field['value']);
           }
         }
-        elseif (!empty($map_to['value'][$nid])) {
+        elseif (!empty($value)) {
           $val_name = $node->$map_to['field']->getFieldDefinition()->getFieldStorageDefinition()->getMainPropertyName();
-          $node->get($map_to['field'])->setValue([[$val_name => $map_to['value'][$nid]]]);
+          $node->get($map_to['field'])->setValue([[$val_name => $value]]);
         }
       }
-      $results[] = $node->save();
+      $node->save();
+
+      $context['results'][] = $nid;
+      $context['sandbox']['progress']++;
+      $context['sandbox']['current_id'] = $key;
+      $context['message'] = t('Adding fields for node @node of @total.', ['@node' => $key + 1, '@total' => $context['sandbox']['max']]);
     }
-    $context['message'] = $message;
-    $context['results'] = $results;
+    if ($context['sandbox']['progress'] != $context['sandbox']['max']) {
+      $context['finished'] = $context['sandbox']['progress'] / $context['sandbox']['max'];
+    }
   }
 
   /**
    * {@inheritdoc}
    */
-  public function convertNodesFinishedCallback($success, $results, $operations) {
+  public static function convertNodesFinishedCallback($success, $results, $operations) {
     // The 'success' parameter means no fatal PHP errors were detected. All
     // other error management should be handled using 'results'.
     if ($success) {
       $message = \Drupal::translation()->formatPlural(
         count($results),
-        'One operations processed.', '@count operations processed.'
+        'One operation processed.', '@count operations processed.'
       );
     }
     else {
