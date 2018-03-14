@@ -228,7 +228,7 @@ class ConvertNodes {
     foreach ($current_nids as $key => $nid) {
       $node = Node::load($nid);
       foreach ($map_fields as $map_from => $map_to) {
-        if ($map_to['field'] == 'remove') {
+        if (isset($map_to['field']) && $map_to['field'] == 'remove') {
           continue;
         }
 
@@ -250,7 +250,24 @@ class ConvertNodes {
           }
         }
 
-        if ($map_to['field'] == 'append_to_body') {
+        if ($map_from == 'create_new') {
+          foreach ($map_to as $field) {
+            if (isset($field['value']['target_id'])) {
+              $node->get($field['field'])->setValue($field['value']['target_id'][0]);
+              if (count($field['value']['target_id']) > 1) {
+                $first_value = array_shift($field['value']['target_id']);
+                foreach ($field['value']['target_id'] as $value) {
+                  $node->get($field['field'])->appendItem($value);
+                }
+                array_unshift($field['value']['target_id'], $first_value);
+              }
+            }
+            else {
+              $node->get($field['field'])->setValue($field['value']);
+            }
+          }
+        }
+        elseif ($map_to['field'] == 'append_to_body') {
           $body = $node->get('body')->getValue()[0];
           $markup = Markup::create($body['value'] . '<strong>' . $map_to['from_label'] . '</strong><p>' . $value . '</p>');
           $node->get('body')->setValue([
@@ -260,11 +277,6 @@ class ConvertNodes {
               'format' => $body['format'],
             ],
           ]);
-        }
-        elseif ($map_from == 'create_new') {
-          foreach ($map_to as $field) {
-            $node->get($field['field'])->setValue($field['value']);
-          }
         }
         elseif (!empty($value)) {
           $val_name = $node->$map_to['field']->getFieldDefinition()->getFieldStorageDefinition()->getMainPropertyName();
