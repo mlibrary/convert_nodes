@@ -8,7 +8,7 @@ use Drupal\Core\Form\FormState;
 use Drupal\Core\Form\FormStateInterface;
 use Drupal\convert_nodes\ConvertNodes;
 use Symfony\Component\DependencyInjection\ContainerInterface;
-use Drupal\Core\Entity\Query\QueryFactory;
+use Drupal\Core\Entity\EntityTypeManagerInterface;
 use Drupal\Core\Entity\EntityFieldManager;
 use Drupal\Core\Routing\RouteBuilderInterface;
 
@@ -67,11 +67,11 @@ class ConvertNodesForm extends FormBase implements FormInterface {
   protected $userInput = [];
 
   /**
-   * The entity query factory service.
+   * The entity type manager service.
    *
-   * @var \Drupal\Core\Entity\Query\QueryFactory
+   * @var \Drupal\Core\Entity\EntityTypeManagerInterface
    */
-  protected $entityQuery;
+  protected $entityTypeManager;
 
   /**
    * The entity manager service.
@@ -90,8 +90,8 @@ class ConvertNodesForm extends FormBase implements FormInterface {
   /**
    * {@inheritdoc}
    */
-  public function __construct(QueryFactory $entity_query, EntityFieldManager $entity_manager, RouteBuilderInterface $route_builder) {
-    $this->entityQuery = $entity_query;
+  public function __construct(EntityTypeManagerInterface $entity_type_manager, EntityFieldManager $entity_manager, RouteBuilderInterface $route_builder) {
+    $this->entityTypeManager = $entity_type_manager;
     $this->entityManager = $entity_manager;
     $this->routeBuilder = $route_builder;
   }
@@ -101,7 +101,7 @@ class ConvertNodesForm extends FormBase implements FormInterface {
    */
   public static function create(ContainerInterface $container) {
     return new static(
-      $container->get('entity.query'),
+      $container->get('entity_type.manager'),
       $container->get('entity_field.manager'),
       $container->get('router.builder')
     );
@@ -124,6 +124,8 @@ class ConvertNodesForm extends FormBase implements FormInterface {
     $update_fields = $userInput['update_fields'];
     $field_table_names = ConvertNodes::getFieldTableNames($this->fieldsFrom);
     $nids = ConvertNodes::getNids($this->fromType);
+echo "<pre>";
+exit(print_r($this->fieldsTo));
     $limit = 100;
     if ($nids) {
       $batch = [
@@ -216,7 +218,7 @@ class ConvertNodesForm extends FormBase implements FormInterface {
         if (method_exists($this, 'convertNodes')) {
           $return_verify = $this->convertNodes();
         }
-        drupal_set_message($return_verify);
+        $this->messenger()->addStatus($return_verify);
         $this->routeBuilder->rebuild();
         break;
     }
@@ -230,7 +232,7 @@ class ConvertNodesForm extends FormBase implements FormInterface {
     if (isset($this->form)) {
       $form = $this->form;
     }
-    drupal_set_message($this->t('This module is experimental. PLEASE do not use on production databases without prior testing and a complete database dump.'), 'warning');
+    $this->messenger()->addWarning($this->t('This module is experimental. PLEASE do not use on production databases without prior testing and a complete database dump.'));
     switch ($this->step) {
       case 1:
         // Get content types and put them in the form.
@@ -317,11 +319,11 @@ class ConvertNodesForm extends FormBase implements FormInterface {
         break;
 
       case 5:
-        drupal_set_message($this->t('Are you sure you want to convert all nodes of type <em>@from_type</em> to type <em>@to_type</em>?',
+        $this->messenger()->addWarning($this->t('Are you sure you want to convert all nodes of type <em>@from_type</em> to type <em>@to_type</em>?',
                              [
                                '@from_type' => $this->fromType,
                                '@to_type' => $this->toType,
-                             ]), 'warning');
+                             ]));
         $form['actions']['submit'] = [
           '#type' => 'submit',
           '#value' => $this->t('Convert'),
@@ -340,7 +342,7 @@ class ConvertNodesForm extends FormBase implements FormInterface {
       case 1:
         $this->from_type = $form['convert_nodes_content_type_from']['#value'];
         $this->to_type = $form['convert_nodes_content_type_to']['#value'];
-        $query = $this->entityQuery->get('node')->condition('type', $this->from_type);
+        $query = $this->entityTypeManager->getStorage('node')->getQuery()->condition('type', $this->from_type);
         $count_type = $query->count()->execute();
         if ($count_type == 0) {
           $form_state->setErrorByName('convert_nodes_content_type_from', $this->t('No content found to convert.'));

@@ -87,7 +87,7 @@ class ConvertNodes {
    * {@inheritdoc}
    */
   public static function getContentTypes() {
-    $contentTypes = \Drupal::service('entity.manager')->getStorage('node_type')->loadMultiple();
+    $contentTypes = \Drupal::service('entity_type.manager')->getStorage('node_type')->loadMultiple();
     $contentTypesList = [];
     foreach ($contentTypes as $contentType) {
       $contentTypesList[$contentType->id()] = $contentType->label();
@@ -167,7 +167,8 @@ class ConvertNodes {
    */
   public static function getNids($from_type) {
     // Get the node IDs to update.
-    $query = \Drupal::service('entity.query')->get('node');
+    $query = \Drupal::service('entity_type.manager')->getStorage('node')->getQuery();
+    //$query = \Drupal::service('entity.query')->get('node');
     $query->condition('type', $from_type);
     $nids = $query->execute();
     return array_values($nids);
@@ -310,7 +311,7 @@ class ConvertNodes {
     else {
       $message = t('Finished with an error.');
     }
-    drupal_set_message($message);
+    \Drupal::messenger()->addStatus($message);
   }
 
 }

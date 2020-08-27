@@ -2,4 +2,5 @@ name: Convert Nodes
 type: module
 description: Convert nodes from one content type to another
 core: 8.x
+core_version_requirement: ^8 || ^9
 configure: convert_nodes.admin
